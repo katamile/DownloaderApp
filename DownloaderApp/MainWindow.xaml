@@ -1,19 +1,245 @@
-<?xml version="1.0" encoding="utf-8"?>
 <Window
     x:Class="DownloaderApp.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="using:DownloaderApp"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
-    Title="DownloaderApp">
+    Title="Downloader">
 
-    <Window.SystemBackdrop>
-        <MicaBackdrop />
-    </Window.SystemBackdrop>
+    <Grid
+        x:Name="RootGrid"
+        Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
-    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border
+            Grid.Row="0"
+            Padding="24,20"
+            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+            BorderThickness="0,0,0,1">
+
+            <StackPanel>
+                <TextBlock
+                    Text="Downloader Beta"
+                    FontSize="28"
+                    FontWeight="SemiBold"/>
+
+                <TextBlock
+                    Margin="0,4,0,0"
+                    Text="Descarga videos y audio fácilmente"
+                    Opacity="0.65"
+                    FontSize="14"/>
+            </StackPanel>
+
+        </Border>
+
+        <!-- Contenido -->
+        <ScrollViewer Grid.Row="1">
+            <Grid
+                Padding="40"
+                HorizontalAlignment="Center"
+                MaxWidth="1000">
+
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- URL -->
+                <StackPanel
+                    Grid.Row="0"
+                    Spacing="12">
+
+                    <TextBlock
+                        Text="Pega un enlace"
+                        FontSize="20"
+                        FontWeight="SemiBold"/>
+
+                    <TextBlock
+                        Text="Introduce la URL del video que quieres descargar."
+                        Opacity="0.65"/>
+
+                    <Grid Margin="0,8,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBox
+                            x:Name="UrlTextBox"
+                            Grid.Column="0"
+                            Height="44"
+                            Text="{Binding Url, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                            PlaceholderText="https://www.youtube.com/watch?v=..."
+                            VerticalContentAlignment="Center"/>
+
+                        <Button
+                            x:Name="AnalyzeButton"
+                            Grid.Column="1"
+                            Margin="12,0,0,0"
+                            Padding="24,0"
+                            Height="44"
+                            Content="Analizar"
+                            Command="{Binding AnalyzeCommand}"/>
+                    </Grid>
+
+                    <!-- Estado del análisis -->
+                    <StackPanel
+                        Orientation="Horizontal"
+                        Spacing="8">
+
+                        <ProgressRing
+                            Width="18"
+                            Height="18"
+                            IsActive="{Binding IsBusy}"/>
+
+                        <TextBlock
+                            Text="{Binding StatusMessage}"
+                            VerticalAlignment="Center"
+                            Opacity="0.65"/>
+
+                    </StackPanel>
+
+                </StackPanel>
+
+                <!-- Información del video -->
+                <Border
+                    x:Name="MediaInfoCard"
+                    Grid.Row="1"
+                    Margin="0,32,0,0"
+                    Padding="20"
+                    CornerRadius="12"
+                    BorderThickness="1"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="220"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Thumbnail -->
+                        <Border
+                            Grid.Column="0"
+                            Width="220"
+                            Height="124"
+                            CornerRadius="8"
+                            Background="{ThemeResource ControlFillColorSecondaryBrush}">
+
+                            <Image
+                                Source="{Binding ThumbnailUrl}"
+                                Stretch="UniformToFill"/>
+
+                        </Border>
+
+                        <!-- Datos -->
+                        <StackPanel
+                            Grid.Column="1"
+                            Margin="24,0,0,0"
+                            VerticalAlignment="Center"
+                            Spacing="8">
+
+                            <TextBlock
+                                x:Name="VideoTitleText"
+                                Text="{Binding VideoTitle}"
+                                FontSize="20"
+                                FontWeight="SemiBold"
+                                TextWrapping="Wrap"/>
+
+                            <TextBlock
+                                x:Name="UploaderText"
+                                Text="{Binding Uploader}"
+                                Opacity="0.65"/>
+
+                            <StackPanel
+                                Orientation="Horizontal"
+                                Spacing="8">
+
+                                <TextBlock
+                                    Text="Duración:"
+                                    Opacity="0.65"/>
+
+                                <TextBlock
+                                    x:Name="DurationText"
+                                    Text="{Binding DurationText}"/>
+
+                            </StackPanel>
+
+                        </StackPanel>
+                    </Grid>
+
+                </Border>
+
+                <!-- Opciones de descarga -->
+                <Border
+                    Grid.Row="2"
+                    Margin="0,20,0,40"
+                    Padding="20"
+                    CornerRadius="12"
+                    BorderThickness="1"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock
+                            Grid.Row="0"
+                            Text="Opciones de descarga"
+                            FontSize="18"
+                            FontWeight="SemiBold"/>
+
+                        <Grid
+                            Grid.Row="1"
+                            Margin="0,18,0,0">
+
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <ComboBox
+                                x:Name="FormatComboBox"
+                                Grid.Column="0"
+                                Header="Formato"
+                                PlaceholderText="Selecciona un formato"
+                                HorizontalAlignment="Stretch">
+
+                                <ComboBoxItem Content="Video • Mejor calidad"/>
+                                <ComboBoxItem Content="Video • 1080p"/>
+                                <ComboBoxItem Content="Video • 720p"/>
+                                <ComboBoxItem Content="Audio • MP3"/>
+                                <ComboBoxItem Content="Audio • M4A"/>
+
+                            </ComboBox>
+
+                            <Button
+                                x:Name="DownloadButton"
+                                Grid.Column="1"
+                                Margin="16,24,0,0"
+                                Padding="28,0"
+                                Height="44"
+                                Content="Descargar"
+                                Style="{StaticResource AccentButtonStyle}"/>
+
+                        </Grid>
+                    </Grid>
+
+                </Border>
+
+            </Grid>
+        </ScrollViewer>
 
     </Grid>
+
 </Window>

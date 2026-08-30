@@ -1,3 +1,5 @@
+using DownloaderApp.Infrastructure.YtDlp;
+using DownloaderApp.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
@@ -26,6 +28,11 @@ namespace DownloaderApp
         public MainWindow()
         {
             InitializeComponent();
+
+            var analyzer = new YtDlpMediaAnalyzer();
+
+            RootGrid.DataContext =
+                new MainViewModel(analyzer);
         }
     }
 }
