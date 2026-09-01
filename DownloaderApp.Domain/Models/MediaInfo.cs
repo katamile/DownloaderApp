@@ -17,5 +17,7 @@ namespace DownloaderApp.Domain.Models
         public double? Duration { get; set; }
 
         public string? WebpageUrl { get; set; }
+
+        public IReadOnlyList<MediaFormat> Formats { get; init; } = [];
     }
 }

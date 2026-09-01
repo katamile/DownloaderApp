@@ -29,10 +29,16 @@ namespace DownloaderApp
         {
             InitializeComponent();
 
-            var analyzer = new YtDlpMediaAnalyzer();
+            var analyzer =
+                new YtDlpMediaAnalyzer();
+
+            var downloader =
+                new YtDlpMediaDownloader();
 
             RootGrid.DataContext =
-                new MainViewModel(analyzer);
+                new MainViewModel(
+                    analyzer,
+                    downloader);
         }
     }
 }

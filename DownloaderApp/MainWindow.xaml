@@ -13,7 +13,8 @@
 
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- Header -->
@@ -213,15 +214,10 @@
                                 Grid.Column="0"
                                 Header="Formato"
                                 PlaceholderText="Selecciona un formato"
-                                HorizontalAlignment="Stretch">
-
-                                <ComboBoxItem Content="Video • Mejor calidad"/>
-                                <ComboBoxItem Content="Video • 1080p"/>
-                                <ComboBoxItem Content="Video • 720p"/>
-                                <ComboBoxItem Content="Audio • MP3"/>
-                                <ComboBoxItem Content="Audio • M4A"/>
-
-                            </ComboBox>
+                                HorizontalAlignment="Stretch"
+                                ItemsSource="{Binding Formats}"
+                                SelectedItem="{Binding SelectedFormat, Mode=TwoWay}"
+                                DisplayMemberPath="DisplayName"/>
 
                             <Button
                                 x:Name="DownloadButton"
@@ -230,9 +226,28 @@
                                 Padding="28,0"
                                 Height="44"
                                 Content="Descargar"
+                                Command="{Binding DownloadCommand}"
                                 Style="{StaticResource AccentButtonStyle}"/>
 
                         </Grid>
+
+                        <StackPanel
+                            Grid.Row="2"
+                            Margin="0,20,0,0"
+                            Spacing="8">
+
+                            <ProgressBar
+                                Minimum="0"
+                                Maximum="100"
+                                Value="{Binding DownloadPercentage}"
+                                Height="4"/>
+
+                            <TextBlock
+                                Text="{Binding DownloadStatus}"
+                                Opacity="0.65"
+                                FontSize="12"/>
+
+                        </StackPanel>
                     </Grid>
 
                 </Border>

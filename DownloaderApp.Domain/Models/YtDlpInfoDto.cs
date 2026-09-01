@@ -24,5 +24,8 @@ namespace DownloaderApp.Domain.Models
 
         [JsonPropertyName("webpage_url")]
         public string? WebpageUrl { get; init; }
+
+        [JsonPropertyName("formats")]
+        public List<YtDlpFormatDto>? Formats { get; init; }
     }
 }

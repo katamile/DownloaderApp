@@ -104,7 +104,25 @@ namespace DownloaderApp.Infrastructure.YtDlp
                     Uploader = data.Uploader,
                     ThumbnailUrl = data.Thumbnail,
                     Duration = data.Duration,
-                    WebpageUrl = data.WebpageUrl
+                    WebpageUrl = data.WebpageUrl,
+
+                    Formats = data.Formats?
+                        .Where(x => !string.IsNullOrWhiteSpace(x.FormatId))
+                        .Select(x => new MediaFormat
+                        {
+                            FormatId = x.FormatId!,
+                            Extension = x.Extension,
+                            Width = x.Width,
+                            Height = x.Height,
+                            Fps = x.Fps,
+                            VideoCodec = x.VideoCodec,
+                            AudioCodec = x.AudioCodec,
+                            FileSize = x.FileSize,
+                            ApproximateFileSize = x.ApproximateFileSize,
+                            AudioBitrate = x.AudioBitrate
+                        })
+                        .ToList()
+                        ?? []
                 };
             }
             catch (OperationCanceledException)
