@@ -14,6 +14,7 @@ using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
+using Windows.Graphics;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -28,6 +29,8 @@ namespace DownloaderApp
         public MainWindow()
         {
             InitializeComponent();
+
+            AppWindow.Resize(new SizeInt32(1050, 760));
 
             var analyzer =
                 new YtDlpMediaAnalyzer();

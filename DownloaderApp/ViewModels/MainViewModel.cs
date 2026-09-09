@@ -2,7 +2,9 @@
 using CommunityToolkit.Mvvm.Input;
 using DownloaderApp.Application.Abstractions;
 using DownloaderApp.Domain.Models;
+using Microsoft.UI.Xaml;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -24,6 +26,19 @@ public partial class MainViewModel : ObservableObject
     }
 
     // ==========================================
+    // VISIBILIDAD DE INFORMACIÓN
+    // ==========================================
+
+    [ObservableProperty]
+    private Visibility mediaDetailsVisibility = Visibility.Collapsed;
+
+    [ObservableProperty]
+    private Visibility downloadProgressVisibility = Visibility.Collapsed;
+
+    [ObservableProperty]
+    private bool isDownloadCompletedMessageOpen;
+
+    // ==========================================
     // URL
     // ==========================================
 
@@ -37,6 +52,7 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(AnalyzeCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DownloadCommand))]
     private bool isBusy;
 
     [ObservableProperty]
@@ -62,14 +78,45 @@ public partial class MainViewModel : ObservableObject
     private string? thumbnailUrl;
 
     // ==========================================
-    // FORMATOS
+    // FORMATOS ORIGINALES DE YT-DLP
     // ==========================================
 
-    public ObservableCollection<MediaFormat> Formats { get; } = [];
+    private ObservableCollection<MediaFormat> Formats { get; } = [];
+
+    // ==========================================
+    // TIPO DE SALIDA
+    // ==========================================
+
+    public ObservableCollection<OutputFormat> OutputFormats { get; } =
+    [
+        new OutputFormat
+        {
+            Name = "Video",
+            Extension = "mp4",
+            IsAudioOnly = false
+        },
+
+        new OutputFormat
+        {
+            Name = "Audio",
+            Extension = "mp3",
+            IsAudioOnly = true
+        }
+    ];
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(DownloadCommand))]
-    private MediaFormat? selectedFormat;
+    private OutputFormat? selectedOutputFormat;
+
+    // ==========================================
+    // CALIDADES
+    // ==========================================
+
+    public ObservableCollection<MediaFormat> Qualities { get; } = [];
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(DownloadCommand))]
+    private MediaFormat? selectedQuality;
 
     // ==========================================
     // DESCARGA
@@ -82,8 +129,53 @@ public partial class MainViewModel : ObservableObject
     private string downloadStatus = string.Empty;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(AnalyzeCommand))]
     [NotifyCanExecuteChangedFor(nameof(DownloadCommand))]
     private bool isDownloading;
+
+    // ==========================================
+    // CAMBIO DE TIPO DE SALIDA
+    // ==========================================
+
+    partial void OnSelectedOutputFormatChanged(OutputFormat? value)
+    {
+        RefreshQualities();
+    }
+
+    private void RefreshQualities()
+    {
+        Qualities.Clear();
+        SelectedQuality = null;
+
+        if (SelectedOutputFormat is null)
+            return;
+
+        IEnumerable<MediaFormat> availableFormats;
+
+        if (SelectedOutputFormat.IsAudioOnly)
+        {
+            // Para MP3 mostramos únicamente pistas con audio.
+            availableFormats = Formats
+                .Where(format => format.HasAudio)
+                .OrderByDescending(format =>
+                    format.AudioBitrate ?? 0);
+        }
+        else
+        {
+            // Para MP4 mostramos formatos que contienen video.
+            availableFormats = Formats
+                .Where(format => format.HasVideo)
+                .OrderByDescending(format =>
+                    format.Height ?? 0);
+        }
+
+        foreach (MediaFormat format in availableFormats)
+        {
+            Qualities.Add(format);
+        }
+
+        SelectedQuality = Qualities.FirstOrDefault();
+    }
 
     // ==========================================
     // ANALIZAR
@@ -95,8 +187,17 @@ public partial class MainViewModel : ObservableObject
         IsBusy = true;
         StatusMessage = "Analizando...";
 
+        MediaDetailsVisibility = Visibility.Collapsed;
+
         Formats.Clear();
-        SelectedFormat = null;
+        Qualities.Clear();
+
+        SelectedQuality = null;
+        SelectedOutputFormat = null;
+
+        DownloadProgressVisibility = Visibility.Collapsed;
+        DownloadPercentage = 0;
+        DownloadStatus = string.Empty;
 
         try
         {
@@ -129,8 +230,13 @@ public partial class MainViewModel : ObservableObject
                 Formats.Add(format);
             }
 
-            SelectedFormat =
-                Formats.FirstOrDefault();
+            // Seleccionamos MP4 por defecto.
+            // Esto ejecutará OnSelectedOutputFormatChanged()
+            // y llenará automáticamente Qualities.
+            SelectedOutputFormat =
+                OutputFormats.FirstOrDefault();
+
+            MediaDetailsVisibility = Visibility.Visible;
 
             StatusMessage =
                 Formats.Count > 0
@@ -139,6 +245,8 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            MediaDetailsVisibility = Visibility.Collapsed;
+
             StatusMessage = ex.Message;
 
             VideoTitle =
@@ -153,7 +261,10 @@ public partial class MainViewModel : ObservableObject
             ThumbnailUrl = null;
 
             Formats.Clear();
-            SelectedFormat = null;
+            Qualities.Clear();
+
+            SelectedOutputFormat = null;
+            SelectedQuality = null;
         }
         finally
         {
@@ -185,10 +296,17 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanDownload))]
     private async Task DownloadAsync()
     {
-        if (SelectedFormat is null)
+        if (SelectedOutputFormat is null ||
+            SelectedQuality is null)
+        {
             return;
+        }
 
         IsDownloading = true;
+
+        IsDownloadCompletedMessageOpen = false;
+        DownloadProgressVisibility = Visibility.Visible;
+
         DownloadPercentage = 0;
         DownloadStatus = "Preparando descarga...";
 
@@ -209,19 +327,35 @@ public partial class MainViewModel : ObservableObject
                         $"Descargando... {downloadProgress.Percentage:0.0}%";
                 });
 
+            /*
+             * POR AHORA:
+             *
+             * Seguimos enviando SelectedQuality porque tu
+             * IMediaDownloader actual recibe MediaFormat.
+             *
+             * En el siguiente cambio habrá que enviar también
+             * SelectedOutputFormat para poder diferenciar:
+             *
+             * MP4 -> descargar/combinar video + audio
+             * MP3 -> descargar audio + convertir con FFmpeg
+             */
+
             await _mediaDownloader.DownloadAsync(
                 Url,
-                SelectedFormat,
+                SelectedQuality,
                 downloadsFolder,
                 progress);
 
             DownloadPercentage = 100;
+            DownloadStatus = "Descarga completada.";
 
-            DownloadStatus =
-                "Descarga completada.";
+            DownloadProgressVisibility = Visibility.Collapsed;
+            IsDownloadCompletedMessageOpen = true;
         }
         catch (Exception ex)
         {
+            IsDownloadCompletedMessageOpen = false;
+
             DownloadStatus =
                 $"Error: {ex.Message}";
         }
@@ -234,7 +368,8 @@ public partial class MainViewModel : ObservableObject
     private bool CanDownload()
     {
         return
-            SelectedFormat is not null &&
+            SelectedOutputFormat is not null &&
+            SelectedQuality is not null &&
             !IsDownloading &&
             !IsBusy;
     }

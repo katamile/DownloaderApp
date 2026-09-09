@@ -15,6 +15,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- Header -->
@@ -58,36 +59,44 @@
                     Spacing="12">
 
                     <TextBlock
-                        Text="Pega un enlace"
+                        Text="Introduce la URL del video que quieres descargar."
                         FontSize="20"
                         FontWeight="SemiBold"/>
 
-                    <TextBlock
-                        Text="Introduce la URL del video que quieres descargar."
-                        Opacity="0.65"/>
+                    <Grid Margin="0,8,0,0"
+                      HorizontalAlignment="Left">
 
-                    <Grid Margin="0,8,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="600"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
 
-                        <TextBox
-                            x:Name="UrlTextBox"
-                            Grid.Column="0"
-                            Height="44"
-                            Text="{Binding Url, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                            PlaceholderText="https://www.youtube.com/watch?v=..."
-                            VerticalContentAlignment="Center"/>
+                                        <TextBox
+                                            x:Name="UrlTextBox"
+                                            Grid.Column="0"
+                                            Width="600"
+                                            MinHeight="44"
+                                            MaxHeight="120"
+                                            TextWrapping="Wrap"
+                                            Text="{Binding Url, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                            PlaceholderText="https://www.youtube.com/watch?v=..."
+                                            VerticalContentAlignment="Center"
+                                            ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                            ScrollViewer.HorizontalScrollBarVisibility="Disabled"/>
 
                         <Button
                             x:Name="AnalyzeButton"
                             Grid.Column="1"
                             Margin="12,0,0,0"
-                            Padding="24,0"
+                            Width="44"
                             Height="44"
-                            Content="Analizar"
-                            Command="{Binding AnalyzeCommand}"/>
+                            VerticalAlignment="Top"
+                            Command="{Binding AnalyzeCommand}"
+                            Style="{StaticResource AccentButtonStyle}"
+                            ToolTipService.ToolTip="Analizar enlace">
+
+                            <FontIcon Glyph="&#xE721;" />
+                        </Button>
                     </Grid>
 
                     <!-- Estado del análisis -->
@@ -117,6 +126,7 @@
                     Padding="20"
                     CornerRadius="12"
                     BorderThickness="1"
+                    Visibility="{Binding MediaDetailsVisibility}"
                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                     Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
 
@@ -180,74 +190,113 @@
 
                 <!-- Opciones de descarga -->
                 <Border
-                    Grid.Row="2"
-                    Margin="0,20,0,40"
-                    Padding="20"
-                    CornerRadius="12"
-                    BorderThickness="1"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+    Grid.Row="2"
+    Margin="0,20,0,40"
+    Padding="20"
+    CornerRadius="12"
+    BorderThickness="1"
+    Visibility="{Binding MediaDetailsVisibility}"
+    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
 
                     <Grid>
+
                         <Grid.RowDefinitions>
+                            <!-- Título -->
                             <RowDefinition Height="Auto"/>
+
+                            <!-- Formato / calidad / botón -->
+                            <RowDefinition Height="Auto"/>
+
+                            <!-- Progreso -->
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
+                        <!-- Título -->
                         <TextBlock
-                            Grid.Row="0"
-                            Text="Opciones de descarga"
-                            FontSize="18"
-                            FontWeight="SemiBold"/>
+            Grid.Row="0"
+            Text="Opciones de descarga"
+            FontSize="18"
+            FontWeight="SemiBold"/>
 
+                        <!-- Opciones -->
                         <Grid
-                            Grid.Row="1"
-                            Margin="0,18,0,0">
+            Grid.Row="1"
+            Margin="0,18,0,0">
 
                             <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="180"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
 
+                            <!-- Formato -->
                             <ComboBox
-                                x:Name="FormatComboBox"
-                                Grid.Column="0"
-                                Header="Formato"
-                                PlaceholderText="Selecciona un formato"
-                                HorizontalAlignment="Stretch"
-                                ItemsSource="{Binding Formats}"
-                                SelectedItem="{Binding SelectedFormat, Mode=TwoWay}"
-                                DisplayMemberPath="DisplayName"/>
+                Grid.Column="0"
+                Header="Formato"
+                PlaceholderText="Tipo"
+                HorizontalAlignment="Stretch"
+                ItemsSource="{Binding OutputFormats}"
+                SelectedItem="{Binding SelectedOutputFormat, Mode=TwoWay}"
+                DisplayMemberPath="Name"/>
 
+                            <!-- Calidad -->
+                            <ComboBox
+                Grid.Column="1"
+                Margin="12,0,0,0"
+                Header="Calidad"
+                PlaceholderText="Selecciona una calidad"
+                HorizontalAlignment="Stretch"
+                ItemsSource="{Binding Qualities}"
+                SelectedItem="{Binding SelectedQuality, Mode=TwoWay}"
+                DisplayMemberPath="DisplayName"/>
+
+                            <!-- Descargar -->
                             <Button
-                                x:Name="DownloadButton"
-                                Grid.Column="1"
-                                Margin="16,24,0,0"
-                                Padding="28,0"
-                                Height="44"
-                                Content="Descargar"
-                                Command="{Binding DownloadCommand}"
-                                Style="{StaticResource AccentButtonStyle}"/>
+                x:Name="DownloadButton"
+                Grid.Column="2"
+                Margin="16,24,0,0"
+                Width="44"
+                Height="44"
+                VerticalAlignment="Top"
+                Command="{Binding DownloadCommand}"
+                Style="{StaticResource AccentButtonStyle}"
+                ToolTipService.ToolTip="Descargar">
+
+                                <FontIcon Glyph="&#xE896;"/>
+
+                            </Button>
 
                         </Grid>
 
+                        <!-- Progreso de descarga -->
                         <StackPanel
-                            Grid.Row="2"
-                            Margin="0,20,0,0"
-                            Spacing="8">
+            Grid.Row="2"
+            Margin="0,18,0,0"
+            Spacing="8"
+                            Visibility="{Binding DownloadProgressVisibility}">
 
                             <ProgressBar
-                                Minimum="0"
-                                Maximum="100"
-                                Value="{Binding DownloadPercentage}"
-                                Height="4"/>
+                Minimum="0"
+                Maximum="100"
+                Value="{Binding DownloadPercentage}"
+                HorizontalAlignment="Stretch"
+                Height="4"/>
 
                             <TextBlock
-                                Text="{Binding DownloadStatus}"
-                                Opacity="0.65"
-                                FontSize="12"/>
+                Text="{Binding DownloadStatus}"
+                Opacity="0.65"
+                FontSize="12"/>
 
                         </StackPanel>
+                        <InfoBar
+                        Grid.Row="3"
+                        Margin="0,16,0,0"
+                        IsOpen="{Binding IsDownloadCompletedMessageOpen, Mode=TwoWay}"
+                        Severity="Success"
+                        Title="Descarga finalizada"
+                        Message="El archivo se descargó correctamente."
+                        IsClosable="True"/>
                     </Grid>
 
                 </Border>
