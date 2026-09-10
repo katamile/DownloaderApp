@@ -85,32 +85,21 @@ public partial class MainViewModel : ObservableObject
     private ObservableCollection<MediaFormat> Formats { get; } = [];
 
     // ==========================================
-    // TIPO DE SALIDA
+    // TIPO DE DESCARGA
     // ==========================================
 
-    public ObservableCollection<OutputFormat> OutputFormats { get; } =
+    public ObservableCollection<DownloadType> DownloadTypes { get; } =
     [
-        new OutputFormat
-        {
-            Name = "Video",
-            Extension = "mp4",
-            IsAudioOnly = false
-        },
-
-        new OutputFormat
-        {
-            Name = "Audio",
-            Extension = "mp3",
-            IsAudioOnly = true
-        }
+        DownloadType.Video,
+        DownloadType.Audio
     ];
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(DownloadCommand))]
-    private OutputFormat? selectedOutputFormat;
+    private DownloadType selectedDownloadType = DownloadType.Video;
 
     // ==========================================
-    // CALIDADES
+    // CALIDADES / FORMATOS DISPONIBLES
     // ==========================================
 
     public ObservableCollection<MediaFormat> Qualities { get; } = [];
@@ -135,10 +124,11 @@ public partial class MainViewModel : ObservableObject
     private bool isDownloading;
 
     // ==========================================
-    // CAMBIO DE TIPO DE SALIDA
+    // CAMBIO DE TIPO DE DESCARGA
     // ==========================================
 
-    partial void OnSelectedOutputFormatChanged(OutputFormat? value)
+    partial void OnSelectedDownloadTypeChanged(
+        DownloadType value)
     {
         RefreshQualities();
     }
@@ -148,26 +138,34 @@ public partial class MainViewModel : ObservableObject
         Qualities.Clear();
         SelectedQuality = null;
 
-        if (SelectedOutputFormat is null)
-            return;
-
         IEnumerable<MediaFormat> availableFormats;
 
-        if (SelectedOutputFormat.IsAudioOnly)
+        if (SelectedDownloadType == DownloadType.Audio)
         {
-            // Para MP3 mostramos únicamente pistas con audio.
+            // Solo streams de audio reales entregados por yt-dlp.
             availableFormats = Formats
-                .Where(format => format.HasAudio)
+                .Where(format =>
+                    format.HasAudio &&
+                    !format.HasVideo)
                 .OrderByDescending(format =>
                     format.AudioBitrate ?? 0);
         }
         else
         {
-            // Para MP4 mostramos formatos que contienen video.
+            // Todos los formatos que contienen video.
+            //
+            // Algunos pueden traer audio incluido y otros
+            // pueden ser video-only.
+            //
+            // YtDlpMediaDownloader se encargará de agregar
+            // una pista de audio cuando sea necesario.
             availableFormats = Formats
-                .Where(format => format.HasVideo)
+                .Where(format =>
+                    format.HasVideo)
                 .OrderByDescending(format =>
-                    format.Height ?? 0);
+                    format.Height ?? 0)
+                .ThenByDescending(format =>
+                    format.Fps ?? 0);
         }
 
         foreach (MediaFormat format in availableFormats)
@@ -175,7 +173,8 @@ public partial class MainViewModel : ObservableObject
             Qualities.Add(format);
         }
 
-        SelectedQuality = Qualities.FirstOrDefault();
+        SelectedQuality =
+            Qualities.FirstOrDefault();
     }
 
     // ==========================================
@@ -188,22 +187,25 @@ public partial class MainViewModel : ObservableObject
         IsBusy = true;
         StatusMessage = "Analizando...";
 
-        MediaDetailsVisibility = Visibility.Collapsed;
+        MediaDetailsVisibility =
+            Visibility.Collapsed;
 
         Formats.Clear();
         Qualities.Clear();
 
         SelectedQuality = null;
-        SelectedOutputFormat = null;
 
-        DownloadProgressVisibility = Visibility.Collapsed;
+        DownloadProgressVisibility =
+            Visibility.Collapsed;
+
         DownloadPercentage = 0;
         DownloadStatus = string.Empty;
 
         try
         {
             MediaInfo media =
-                await _analyzeMediaUseCase.ExecuteAsync(Url);
+                await _analyzeMediaUseCase.ExecuteAsync(
+                    Url);
 
             VideoTitle = media.Title;
 
@@ -212,32 +214,38 @@ public partial class MainViewModel : ObservableObject
                     ? "Autor desconocido"
                     : media.Uploader;
 
-            ThumbnailUrl = media.ThumbnailUrl;
+            ThumbnailUrl =
+                media.ThumbnailUrl;
 
             DurationText =
                 FormatDuration(media.Duration);
 
-            var usefulFormats = media.Formats
-                .Where(format =>
-                    format.HasVideo ||
-                    format.HasAudio)
-                .OrderByDescending(format =>
-                    format.Height ?? 0)
-                .ThenByDescending(format =>
-                    format.AudioBitrate ?? 0);
+            IEnumerable<MediaFormat> usefulFormats =
+                media.Formats
+                    .Where(format =>
+                        format.HasVideo ||
+                        format.HasAudio)
+                    .OrderByDescending(format =>
+                        format.Height ?? 0)
+                    .ThenByDescending(format =>
+                        format.AudioBitrate ?? 0);
 
             foreach (MediaFormat format in usefulFormats)
             {
                 Formats.Add(format);
             }
 
-            // Seleccionamos MP4 por defecto.
-            // Esto ejecutará OnSelectedOutputFormatChanged()
-            // y llenará automáticamente Qualities.
-            SelectedOutputFormat =
-                OutputFormats.FirstOrDefault();
+            // Video por defecto.
+            SelectedDownloadType =
+                DownloadType.Video;
 
-            MediaDetailsVisibility = Visibility.Visible;
+            // Como Video ya podría ser el valor actual,
+            // llamamos explícitamente para asegurar que
+            // la lista se refresque después del análisis.
+            RefreshQualities();
+
+            MediaDetailsVisibility =
+                Visibility.Visible;
 
             StatusMessage =
                 Formats.Count > 0
@@ -246,9 +254,11 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            MediaDetailsVisibility = Visibility.Collapsed;
+            MediaDetailsVisibility =
+                Visibility.Collapsed;
 
-            StatusMessage = ex.Message;
+            StatusMessage =
+                ex.Message;
 
             VideoTitle =
                 "No se pudo analizar el video";
@@ -264,7 +274,6 @@ public partial class MainViewModel : ObservableObject
             Formats.Clear();
             Qualities.Clear();
 
-            SelectedOutputFormat = null;
             SelectedQuality = null;
         }
         finally
@@ -275,19 +284,26 @@ public partial class MainViewModel : ObservableObject
 
     private bool CanAnalyze()
     {
-        if (IsBusy || IsDownloading)
+        if (IsBusy ||
+            IsDownloading)
+        {
             return false;
+        }
 
         if (string.IsNullOrWhiteSpace(Url))
+        {
             return false;
+        }
 
         return Uri.TryCreate(
                    Url,
                    UriKind.Absolute,
                    out Uri? uri)
                &&
-               (uri.Scheme == Uri.UriSchemeHttp ||
-                uri.Scheme == Uri.UriSchemeHttps);
+               (
+                   uri.Scheme == Uri.UriSchemeHttp ||
+                   uri.Scheme == Uri.UriSchemeHttps
+               );
     }
 
     // ==========================================
@@ -297,8 +313,7 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanDownload))]
     private async Task DownloadAsync()
     {
-        if (SelectedOutputFormat is null ||
-            SelectedQuality is null)
+        if (SelectedQuality is null)
         {
             return;
         }
@@ -313,45 +328,56 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
-            string downloadsFolder = Path.Combine(
-                Environment.GetFolderPath(
-                    Environment.SpecialFolder.UserProfile),
-                "Downloads");
+            string downloadsFolder =
+                Path.Combine(
+                    Environment.GetFolderPath(
+                        Environment.SpecialFolder.UserProfile),
+                    "Downloads");
 
             var progress =
-                new Progress<DownloadProgress>(downloadProgress =>
+                new Progress<DownloadProgress>(
+                    downloadProgress =>
+                    {
+                        DownloadPercentage =
+                            downloadProgress.Percentage;
+
+                        DownloadStatus =
+                            $"Descargando... {downloadProgress.Percentage:0.0}%";
+                    });
+
+            // El formato de salida será el mismo formato
+            // que yt-dlp nos entregó.
+            var outputFormat =
+                new OutputFormat
                 {
-                    DownloadPercentage =
-                        downloadProgress.Percentage;
+                    Name = SelectedDownloadType.ToString(),
 
-                    DownloadStatus =
-                        $"Descargando... {downloadProgress.Percentage:0.0}%";
-                });
+                    Extension =
+                        SelectedQuality.Extension
+                        ?? string.Empty,
 
-            /*
-             * POR AHORA:
-             *
-             * Seguimos enviando SelectedQuality porque tu
-             * IMediaDownloader actual recibe MediaFormat.
-             *
-             * En el siguiente cambio habrá que enviar también
-             * SelectedOutputFormat para poder diferenciar:
-             *
-             * MP4 -> descargar/combinar video + audio
-             * MP3 -> descargar audio + convertir con FFmpeg
-             */
+                    IsAudioOnly =
+                        SelectedDownloadType ==
+                        DownloadType.Audio
+                };
 
             await _downloadMediaUseCase.ExecuteAsync(
                 Url,
                 SelectedQuality,
+                outputFormat,
                 downloadsFolder,
                 progress);
 
             DownloadPercentage = 100;
-            DownloadStatus = "Descarga completada.";
 
-            DownloadProgressVisibility = Visibility.Collapsed;
-            IsDownloadCompletedMessageOpen = true;
+            DownloadStatus =
+                "Descarga completada.";
+
+            DownloadProgressVisibility =
+                Visibility.Collapsed;
+
+            IsDownloadCompletedMessageOpen =
+                true;
         }
         catch (Exception ex)
         {
@@ -369,7 +395,6 @@ public partial class MainViewModel : ObservableObject
     private bool CanDownload()
     {
         return
-            SelectedOutputFormat is not null &&
             SelectedQuality is not null &&
             !IsDownloading &&
             !IsBusy;
@@ -379,13 +404,17 @@ public partial class MainViewModel : ObservableObject
     // HELPERS
     // ==========================================
 
-    private static string FormatDuration(double? seconds)
+    private static string FormatDuration(
+        double? seconds)
     {
         if (seconds is null)
+        {
             return "--:--";
+        }
 
         TimeSpan time =
-            TimeSpan.FromSeconds(seconds.Value);
+            TimeSpan.FromSeconds(
+                seconds.Value);
 
         if (time.TotalHours >= 1)
         {

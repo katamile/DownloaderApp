@@ -69,6 +69,7 @@ public sealed class YtDlpMediaDownloader : IMediaDownloader
     public async Task DownloadAsync(
         string url,
         MediaFormat format,
+        OutputFormat outputFormat,
         string outputDirectory,
         IProgress<DownloadProgress>? progress = null,
         CancellationToken cancellationToken = default)
@@ -84,6 +85,7 @@ public sealed class YtDlpMediaDownloader : IMediaDownloader
             CreateProcessStartInfo(
                 url,
                 format,
+                outputFormat,
                 outputDirectory);
 
         using var process = new Process
@@ -167,6 +169,7 @@ public sealed class YtDlpMediaDownloader : IMediaDownloader
     private ProcessStartInfo CreateProcessStartInfo(
         string url,
         MediaFormat format,
+        OutputFormat outputFormat,
         string outputDirectory)
     {
         var startInfo = new ProcessStartInfo
@@ -200,61 +203,56 @@ public sealed class YtDlpMediaDownloader : IMediaDownloader
             "%(progress._eta_str)s|" +
             "%(progress.status)s");
 
-        // Formato
-        startInfo.ArgumentList.Add("-f");
+        // ==========================================
+        // AUDIO
+        // ==========================================
 
-        string formatSelector;
-
-        if (format.HasVideo && !format.HasAudio)
+        if (outputFormat.IsAudioOnly)
         {
-            if (string.Equals(
-                format.Extension,
-                "mp4",
-                StringComparison.OrdinalIgnoreCase))
+            startInfo.ArgumentList.Add("-f");
+            startInfo.ArgumentList.Add(
+                format.FormatId);
+
+            startInfo.ArgumentList.Add("-x");
+
+            startInfo.ArgumentList.Add(
+                "--audio-format");
+
+            startInfo.ArgumentList.Add(
+                outputFormat.Extension);
+        }
+
+        // ==========================================
+        // VIDEO
+        // ==========================================
+
+        else
+        {
+            startInfo.ArgumentList.Add("-f");
+
+            string formatSelector;
+
+            if (format.HasVideo && !format.HasAudio)
             {
                 formatSelector =
                     $"{format.FormatId}+bestaudio[ext=m4a]/" +
                     $"{format.FormatId}+bestaudio/" +
                     "best";
             }
-            else if (string.Equals(
-                format.Extension,
-                "webm",
-                StringComparison.OrdinalIgnoreCase))
-            {
-                formatSelector =
-                    $"{format.FormatId}+bestaudio[ext=webm]/" +
-                    $"{format.FormatId}+bestaudio/" +
-                    "best";
-            }
             else
             {
                 formatSelector =
-                    $"{format.FormatId}+bestaudio/best";
+                    format.FormatId;
             }
-        }
-        else
-        {
-            formatSelector =
-                format.FormatId;
-        }
 
-        startInfo.ArgumentList.Add(
-            formatSelector);
+            startInfo.ArgumentList.Add(
+                formatSelector);
 
-        // Contenedor final
-        if (format.HasVideo)
-        {
             startInfo.ArgumentList.Add(
                 "--merge-output-format");
 
             startInfo.ArgumentList.Add(
-                string.Equals(
-                    format.Extension,
-                    "webm",
-                    StringComparison.OrdinalIgnoreCase)
-                    ? "webm"
-                    : "mp4");
+                outputFormat.Extension);
         }
 
         // Nombre final

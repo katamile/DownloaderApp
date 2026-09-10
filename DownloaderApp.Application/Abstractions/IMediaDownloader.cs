@@ -10,6 +10,7 @@ namespace DownloaderApp.Application.Abstractions
         Task DownloadAsync(
             string url,
             MediaFormat format,
+            OutputFormat outputFormat,
             string outputDirectory,
             IProgress<DownloadProgress>? progress = null,
             CancellationToken cancellationToken = default);
