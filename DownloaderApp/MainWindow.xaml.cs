@@ -1,3 +1,5 @@
+using DownloaderApp.Application.UseCases.AnalyzeMedia;
+using DownloaderApp.Application.UseCases.DownloadMedia;
 using DownloaderApp.Infrastructure.YtDlp;
 using DownloaderApp.ViewModels;
 using Microsoft.UI.Xaml;
@@ -38,10 +40,18 @@ namespace DownloaderApp
             var downloader =
                 new YtDlpMediaDownloader();
 
+            var analyzeMediaUseCase =
+                new AnalyzeMediaUseCase(
+                    analyzer);
+
+            var downloadMediaUseCase =
+                new DownloadMediaUseCase(
+                    downloader);
+
             RootGrid.DataContext =
                 new MainViewModel(
-                    analyzer,
-                    downloader);
+                    analyzeMediaUseCase,
+                    downloadMediaUseCase);
         }
     }
 }

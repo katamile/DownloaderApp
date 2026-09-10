@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using DownloaderApp.Application.Abstractions;
+using DownloaderApp.Application.UseCases.AnalyzeMedia;
+using DownloaderApp.Application.UseCases.DownloadMedia;
 using DownloaderApp.Domain.Models;
 using Microsoft.UI.Xaml;
 using System;
@@ -14,15 +15,15 @@ namespace DownloaderApp.ViewModels;
 
 public partial class MainViewModel : ObservableObject
 {
-    private readonly IMediaAnalyzer _mediaAnalyzer;
-    private readonly IMediaDownloader _mediaDownloader;
+    private readonly AnalyzeMediaUseCase _analyzeMediaUseCase;
+    private readonly DownloadMediaUseCase _downloadMediaUseCase;
 
     public MainViewModel(
-        IMediaAnalyzer mediaAnalyzer,
-        IMediaDownloader mediaDownloader)
+        AnalyzeMediaUseCase analyzeMediaUseCase,
+        DownloadMediaUseCase downloadMediaUseCase)
     {
-        _mediaAnalyzer = mediaAnalyzer;
-        _mediaDownloader = mediaDownloader;
+        _analyzeMediaUseCase = analyzeMediaUseCase;
+        _downloadMediaUseCase = downloadMediaUseCase;
     }
 
     // ==========================================
@@ -202,7 +203,7 @@ public partial class MainViewModel : ObservableObject
         try
         {
             MediaInfo media =
-                await _mediaAnalyzer.AnalyzeAsync(Url);
+                await _analyzeMediaUseCase.ExecuteAsync(Url);
 
             VideoTitle = media.Title;
 
@@ -340,7 +341,7 @@ public partial class MainViewModel : ObservableObject
              * MP3 -> descargar audio + convertir con FFmpeg
              */
 
-            await _mediaDownloader.DownloadAsync(
+            await _downloadMediaUseCase.ExecuteAsync(
                 Url,
                 SelectedQuality,
                 downloadsFolder,
